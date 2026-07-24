@@ -119,6 +119,14 @@ button:active{opacity:.7}
 .setpos{font-variant-numeric:tabular-nums;color:var(--muted);font-size:.85rem;
   min-width:2.6em;text-align:center;}
 
+/* ---- aktiva filter ---- */
+.activef{max-width:680px;margin:8px auto 0;padding:0 16px;display:flex;flex-wrap:wrap;gap:6px;}
+.afchip{display:inline-flex;align-items:center;gap:7px;font-size:.8rem;padding:4px 11px;
+  border-radius:999px;background:var(--pine);color:var(--paper);border:1px solid var(--pine);}
+.afchip b{cursor:pointer;font-weight:700;opacity:.85;padding:0 1px;}
+.afclear{display:inline-flex;align-items:center;font-size:.8rem;padding:4px 11px;border-radius:999px;
+  background:none;border:1px dashed var(--border);color:var(--muted);cursor:pointer;}
+
 /* ---- favoriter & arkiv ---- */
 .favstar{color:var(--falu);font-size:.8em;}
 .arkexport{max-width:680px;margin:10px auto 0;padding:0 16px;}
@@ -360,6 +368,45 @@ function showCover(){
 }
 function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 
+/* ---------- aktiva filter (alltid synliga, alltid avstängbara) ---------- */
+function activeChips(){
+  const dLabel = {easy:"lätt", medium:"medel", hard:"svår"};
+  const chips = [];
+  if(kapitel) chips.push({lbl: kapitel.namn, clear: () => { kapitel = null; }});
+  fGenre.forEach(v => chips.push({lbl: v, clear: () => { fGenre.delete(v); store.set("fgenre",[...fGenre]); }}));
+  fTema.forEach(v => chips.push({lbl: v, clear: () => { fTema.delete(v); store.set("ftema",[...fTema]); }}));
+  fDiff.forEach(v => chips.push({lbl: dLabel[v]||v, clear: () => { fDiff.delete(v); store.set("fdiff",[...fDiff]); }}));
+  fLang.forEach(v => chips.push({lbl: v, clear: () => { fLang.delete(v); store.set("flang",[...fLang]); }}));
+  if(fArtist) chips.push({lbl: "Artist: "+fArtist, clear: () => { fArtist=""; store.set("fartist",""); }});
+  if(fKalla) chips.push({lbl: "Källa: "+fKalla, clear: () => { fKalla=""; store.set("fkalla",""); }});
+  if(fFavs) chips.push({lbl: "★ Favoriter", clear: () => { fFavs=false; }});
+  return chips;
+}
+function renderActive(){
+  const holder = document.getElementById("activef");
+  if(!holder) return;
+  const chips = activeChips();
+  holder.innerHTML = chips.map((c,i) =>
+      `<span class="afchip">${esc(c.lbl)}<b data-af="${i}" role="button" aria-label="Ta bort filtret">&#10005;</b></span>`).join("")
+    + (chips.length > 1 ? `<span class="afclear" id="afclear">rensa alla</span>` : "");
+  holder.querySelectorAll("[data-af]").forEach(el => el.onclick = () => {
+    chips[+el.dataset.af].clear();
+    document.title = ctxName()+" – Sångboken";
+    renderChips(); renderActive(); renderList();
+    const ctxEl = document.querySelector(".ctx");
+    if(ctxEl) ctxEl.innerHTML = `${esc(ctxName())} <span class="count" id="count"></span>`, renderList();
+  });
+  const cl = document.getElementById("afclear");
+  if(cl) cl.onclick = () => {
+    kapitel = null; clearFilters();
+    document.title = ctxName()+" – Sångboken";
+    renderChips(); renderActive();
+    const ctxEl = document.querySelector(".ctx");
+    if(ctxEl) ctxEl.innerHTML = `${esc(ctxName())} <span class="count" id="count"></span>`;
+    renderList();
+  };
+}
+
 /* ---------- listvy ---------- */
 function ctxName(){
   if(fArkiv) return "Arkiverade";
@@ -378,12 +425,12 @@ function showList(opt){
       <div class="crumb">
         <button id="home" aria-label="Till pärmen">&#8962;</button>
         <span class="ctx">${esc(ctxName())} <span class="count" id="count"></span></span>
-        ${kapitel?`<span class="drop" id="dropkap">lämna kapitlet</span>`:""}
         <button class="chipbtn" id="printbtn" title="Skriv ut häfte av träffarna">Skriv ut</button>
       </div>
       <input id="q" type="search" placeholder="Sök låt eller artist…" autocomplete="off" value="${esc(query)}">
       <button class="refinebtn" id="refine">${refineOpen?"Dölj filter":"Förfina&nbsp;&#9662;"}</button>
     </header>
+    <div class="activef" id="activef"></div>
     <div class="filters" id="filters" ${refineOpen?"":"hidden"}></div>
     ${fArkiv && arkiv.size?`<div class="arkexport"><button class="chipbtn" id="arkcopy">Kopiera flyttlista (${arkiv.size} väntar på flytt)</button></div>`:""}
     <ul class="songlist" id="list"></ul>
@@ -396,8 +443,6 @@ function showList(opt){
     try { await navigator.clipboard.writeText(lista); ac.textContent = "Kopierad ✓"; }
     catch(e){ window.prompt("Kopiera listan manuellt:", lista); }
   };
-  const dk = document.getElementById("dropkap");
-  if(dk) dk.onclick = () => { kapitel=null; showList(); };
   const qEl = document.getElementById("q");
   qEl.addEventListener("input", e => { query = e.target.value; renderList(); });
   document.getElementById("refine").onclick = () => {
@@ -406,6 +451,7 @@ function showList(opt){
     document.getElementById("refine").innerHTML = refineOpen?"Dölj filter":"Förfina&nbsp;&#9662;";
   };
   renderChips();
+  renderActive();
   renderList();
   renderRail();
   if(opt && opt.focusSearch) qEl.focus();
@@ -441,14 +487,14 @@ function renderChips(){
     const [getSet, key] = SETS[c.dataset.set]; toggle(getSet(), c.dataset.val, key);
   });
   const asel = document.getElementById("artistsel");
-  if(asel) asel.oninput = () => { fArtist = asel.value.trim(); store.set("fartist", fArtist); renderList(); };
+  if(asel) asel.oninput = () => { fArtist = asel.value.trim(); store.set("fartist", fArtist); renderActive(); renderList(); };
   const c = document.getElementById("clear");
-  if(c) c.onclick = () => { clearFilters(); renderChips(); renderList(); };
+  if(c) c.onclick = () => { clearFilters(); renderChips(); renderActive(); renderList(); };
 }
 function toggle(set, val, key){
   set.has(val) ? set.delete(val) : set.add(val);
   store.set(key, [...set]);
-  renderChips(); renderList();
+  renderChips(); renderActive(); renderList();
 }
 function renderList(){
   const hits = SONGS.map((s,i)=>[s,i]).filter(([s]) => matches(s));
