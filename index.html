@@ -706,7 +706,7 @@ function renderSections(s, tr){
     if(sec.type === "comment") return `<div class="section comment">${sec.lines.map(esc).join("<br>")}</div>`;
     return `<div class="section ${sec.type}">` + sec.lines.map(line =>
       `<div class="line">` + line.map(([c,t]) =>
-        `<span class="seg${c?" hasch":""}">${c?`<span class="chord">${esc(trans(c,tr))}</span>`:""}<span>${esc(t)}</span></span>`
+        `<span class="seg${c?" hasch":""}">${c?`<span class="chord">${esc(trans(c,tr))}</span>`:""}<span>${esc(t) || (c ? "\u00A0" : "")}</span></span>`
       ).join("") + `</div>`).join("") + `</div>`;
   }).join("");
 }

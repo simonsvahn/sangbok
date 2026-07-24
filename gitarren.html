@@ -929,7 +929,7 @@ function renderBody(song, t){
           const txt = (sg.c!==null ? '['+sg.c+']' : '') + sg.t;   /* ogiltig symbol: visa som text */
           html+=`<span class="seg"><span class="c">&nbsp;</span>${esc(txt)}</span>`;
         }
-        else html+=`<span class="seg"><span class="c" data-c="${esc(sym)}">${esc(sym)}</span>${esc(sg.t)}</span>`;
+        else html+=`<span class="seg"><span class="c" data-c="${esc(sym)}">${esc(sym)}</span>${esc(sg.t) || "&nbsp;"}</span>`;
       }
       out.push(`<div class="ln haschords">${html}</div>`);
     } else {
