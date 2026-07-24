@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Sångboken</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#42594a">
 <style>
 /* ==========================================================================
    SÅNGBOKEN — identitet: "tvåfärgstryck"
@@ -250,6 +254,10 @@ const KAPITEL = [
 ];
 KAPITEL.forEach(k => { const t=new Set(k.tags); k.set=t;
   k.antal = SONGS.filter(s => s.tags.some(x=>t.has(x))).length; });
+
+/* ---------- offline (service worker) ---------- */
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost"))
+  navigator.serviceWorker.register("sw.js").catch(() => {});
 
 /* ---------- state ---------- */
 const app = document.getElementById("app");
